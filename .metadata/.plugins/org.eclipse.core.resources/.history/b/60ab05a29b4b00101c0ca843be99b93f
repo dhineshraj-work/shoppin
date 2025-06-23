@@ -1,0 +1,36 @@
+package com.shoppin.ecommerce.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.model.AddressModel;
+import com.shoppin.ecommerce.model.CustomerModel;
+import com.shoppin.ecommerce.repo.AddressRepository;
+import com.shoppin.ecommerce.repo.CustomerRepository;
+
+@Service
+public class AddressService {
+
+	@Autowired
+	AddressRepository addressRepository;
+	
+	@Autowired
+	CustomerRepository customerRepository;
+
+	public ResponseEntity<Object> addAddress(String username, AddressModel address) {
+		try {
+			CustomerModel customer = customerRepository.findByEmail(username).orElse(null);
+			
+			address.setUser(customer);
+			
+			addressRepository.save(address);
+			
+			return ResponseEntity.ok(address);
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body(null);
+		}
+	}
+	
+	
+}

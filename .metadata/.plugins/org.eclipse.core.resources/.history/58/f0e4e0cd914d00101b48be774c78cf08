@@ -1,0 +1,19 @@
+package com.shoppin.ecommerce.repo;
+
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.shoppin.ecommerce.model.AddressModel;
+import com.shoppin.ecommerce.model.AddressType;
+import com.shoppin.ecommerce.model.CustomerModel;
+
+@Repository
+public interface AddressRepository extends JpaRepository<AddressModel, Integer>{
+
+	Optional<AddressModel> findByUserEmail(String email);
+
+	Optional<CustomerModel> findByUserIdAndAddressLine1AndAddressType(Integer pk, String addressLine1,
+			AddressType addressType);
+}

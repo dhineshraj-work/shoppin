@@ -1,0 +1,34 @@
+package com.shoppin.ecommerce.controller;
+
+import java.security.Principal;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.shoppin.ecommerce.dto.CheckoutAddressDTO;
+import com.shoppin.ecommerce.dto.CheckoutCartDTO;
+import com.shoppin.ecommerce.service.CheckoutService;
+
+@RestController
+@RequestMapping("auth/user")
+public class CheckoutCartController {
+	
+	@Autowired
+	CheckoutService checkoutService;
+	
+	@PostMapping("checkout/address/add")
+	public ResponseEntity<Object> addressAdd(Principal principal, @RequestBody CheckoutAddressDTO checkoutDTO){
+		String username = principal.getName();
+		return checkoutService.addAddress(username, checkoutDTO);
+	}
+	
+	@PostMapping("checkout/payment")
+	public ResponseEntity<Object> cartCheckout(Principal principal, @RequestBody CheckoutCartDTO checkoutDTO){
+		String username = principal.getName();
+		return checkoutService.cartCheckout(username, checkoutDTO);
+	}
+}

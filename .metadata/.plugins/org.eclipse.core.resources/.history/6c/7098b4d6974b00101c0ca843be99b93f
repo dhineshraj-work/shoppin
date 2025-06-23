@@ -1,0 +1,32 @@
+package com.shoppin.ecommerce.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.repo.AddressRepository;
+import com.shoppin.ecommerce.repo.CartProductRepository;
+import com.shoppin.ecommerce.repo.CartRepository;
+import com.shoppin.ecommerce.repo.CustomerRepository;
+
+@Service
+public class CartService {
+
+	@Autowired
+	CustomerRepository customerRepository;
+	
+	@Autowired
+	CartRepository cartRepository;
+	
+	@Autowired
+	CartProductRepository cartProductRepository;
+	
+	@Autowired
+	AddressRepository addressRepository;
+
+	public ResponseEntity<?> getCart(String username) throws NullPointerException{
+		return ResponseEntity.ok(cartRepository.findByCustomerEmail(username).orElseThrow());
+	}
+	
+	
+}

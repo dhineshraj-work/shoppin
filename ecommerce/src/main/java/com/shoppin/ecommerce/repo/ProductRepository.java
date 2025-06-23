@@ -1,0 +1,35 @@
+package com.shoppin.ecommerce.repo;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
+
+import com.shoppin.ecommerce.model.ProductModel;
+
+import jakarta.transaction.Transactional;
+
+@Repository
+public interface ProductRepository extends JpaRepository<ProductModel, Integer>{
+
+	Optional<ProductModel> findByProductName(String productName);
+
+	boolean existsBySellerPkAndProductName(Integer pk, String productName);
+	
+	@Query("SELECT MAX(CAST(p.skuCode AS int)) FROM ProductModel p")
+	Integer findMaxSkuCodeAsInt();
+
+	List<ProductModel> findBySellerEmail(String username);
+
+	Optional<ProductModel> findBySkuCode(String skuCode);
+
+	Optional<ProductModel> findBySkuCodeAndSellerPk(String skuCode, Integer pk);
+
+	@Transactional
+	void deleteBySkuCodeAndSellerPk(String sku, Integer pk);
+
+	Optional<ProductModel> findByProductNameAndSellerPk(String productName, Integer pk);
+
+}

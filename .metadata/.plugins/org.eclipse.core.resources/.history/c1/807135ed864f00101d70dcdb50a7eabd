@@ -1,0 +1,174 @@
+package com.shoppin.ecommerce.service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.model.CartModel;
+import com.shoppin.ecommerce.model.CartProductModel;
+import com.shoppin.ecommerce.model.CustomerModel;
+import com.shoppin.ecommerce.model.ProductModel;
+import com.shoppin.ecommerce.repo.AddressRepository;
+import com.shoppin.ecommerce.repo.CartProductRepository;
+import com.shoppin.ecommerce.repo.CartRepository;
+import com.shoppin.ecommerce.repo.CustomerRepository;
+import com.shoppin.ecommerce.repo.ProductRepository;
+
+@Service
+public class CartService {
+
+	@Autowired
+	CustomerRepository customerRepository;
+	
+	@Autowired
+	CartRepository cartRepository;
+	
+	@Autowired
+	CartProductRepository cartProductRepository;
+	
+	@Autowired
+	AddressRepository addressRepository;
+	
+	@Autowired
+	ProductRepository productRepository;
+
+	public ResponseEntity<Object> getCart(String username) {
+		try {
+			
+			CartModel cartModel = cartRepository.findByCustomerEmail(username).orElse(null);
+			if(cartModel==null) {
+				return ResponseEntity.status(404).body("No Cart Available");
+			}
+			return ResponseEntity.ok(cartModel);
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong\n"+e);
+		}
+	
+	}
+
+	public ResponseEntity<Object> addProductToCart(String username, String sku) {
+		try {
+			CustomerModel customer = customerRepository.findByEmail(username).orElse(null);
+			
+			CartModel cart = cartRepository.findByCustomerEmail(username).orElse(null);
+			
+			ProductModel product = productRepository.findBySkuCode(sku).orElse(null);
+			
+			if(product==null) {
+				return ResponseEntity.status(404).body("Product Not Found");
+			}
+			
+			if(product.getStock()<1) {
+				return ResponseEntity.status(409).body("There is no stock available for this product : "+ sku);
+			}
+			
+			if(cartProductRepository.existsByCartCustomerPkAndProductSkuCode(customer.getPk(), sku)) {
+				return ResponseEntity.status(409).body("The product already added in cart : " + sku);
+			}
+			
+			if(cart==null) {
+				
+				cart = new CartModel();				
+				cart.setCustomer(customer);
+				cart = cartRepository.save(cart);
+			}
+			
+			List<CartProductModel> cartProducts = cart.getCartProducts();
+			
+			if(cartProducts==null) {
+				cartProducts = new ArrayList<>();
+				cart.setCartProducts(cartProducts);
+			}
+			
+			CartProductModel cartProductModel = new CartProductModel();
+			cartProductModel.setCart(cart);
+			cartProductModel.setProduct(product);
+			cartProductModel.setQuantity(1);
+			
+			cartProducts.add(cartProductModel);
+			cart.setTotalPrice(cart.updateTotalPrice(cart.getCartProducts()));
+			cart.setCartDiscountPrice(cart.getTotalPrice()-(getDiscountOfProduct(product, 1)));
+			cartProductRepository.save(cartProductModel);
+			
+			return ResponseEntity.ok(cart);
+			
+			
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong\n"+e);
+		}
+	}
+
+	public ResponseEntity<Object> updateCart(String username, String sku, Integer quantity) {
+		try {
+			
+			CustomerModel customer = customerRepository.findByEmail(username).orElse(null);
+			
+			CartModel cart = cartRepository.findByCustomerEmail(username).orElse(null);
+			
+			CartProductModel cartProduct = cartProductRepository.findByCartCustomerPkAndProductSkuCode(customer.getPk(), sku).orElse(null);
+			
+			if(!cartProductRepository.existsByCartCustomerPkAndProductSkuCode(customer.getPk(), sku)) {
+				return ResponseEntity.status(404).body("The Product is not available in your cart");
+			}
+			
+			if(quantity==0) {
+				cartProductRepository.deleteByCartCustomerPkAndProductSkuCode(customer.getPk(), sku);
+				cart.setTotalPrice(cart.updateTotalPrice(cart.getCartProducts()));
+				cartRepository.save(cart);
+				return ResponseEntity.ok("Cart Updated");
+			}
+			
+			if(quantity>cartProduct.getProduct().getStock()) {
+				return ResponseEntity.status(409).body("The Product stock available : "+cartProduct.getProduct().getStock());
+			}
+			
+			cartProduct.setQuantity(quantity);
+			
+			cart.setTotalPrice(cart.updateTotalPrice(cart.getCartProducts()));
+			
+			cart.setCartDiscountPrice(cart.getTotalPrice()-(getCartDiscountOfProduct(cartProduct.getProduct(), quantity)));
+			
+			cartProductRepository.save(cartProduct);
+			
+			return ResponseEntity.ok(cartRepository.findByCustomerEmail(username));
+			
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong while updating cart");
+		}
+	}
+
+	public ResponseEntity<Object> deleteCart(String username, String sku) {
+		try {
+			CustomerModel customer = customerRepository.findByEmail(username).orElse(null);
+			
+			CartModel cart = cartRepository.findByCustomerEmail(username).orElse(null);
+			
+			CartProductModel cartProduct = cartProductRepository.findByCartCustomerPkAndProductSkuCode(customer.getPk(), sku).orElse(null);
+			
+			if(cartProduct == null) {
+				return ResponseEntity.status(404).body("The Product is not available in your cart");
+			}
+			cartProductRepository.deleteByCartCustomerPkAndProductSkuCode(customer.getPk(), sku);
+			
+			List<CartProductModel> cartProductModels = cartProductRepository.findByCartPk(cart.getPk());
+			cart.setTotalPrice(cart.updateTotalPrice(cartProductModels));
+			cartRepository.save(cart);
+			return ResponseEntity.ok("Cart Deleted");
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong while Deleting cart");
+		}
+	}
+	
+	private double getCartDiscountOfProduct(ProductModel product, int quantity) {
+		
+		double discount = product.getDiscount();	
+		
+		return (discount==0)?0:discount*quantity;
+	}
+
+	
+	
+}

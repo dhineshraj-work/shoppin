@@ -1,0 +1,29 @@
+package com.shoppin.ecommerce.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.model.AddressModel;
+import com.shoppin.ecommerce.repo.AddressRepository;
+import com.shoppin.ecommerce.repo.CartRepository;
+import com.shoppin.ecommerce.repo.CustomerRepository;
+
+@Service
+public class CheckoutService {
+	
+	@Autowired
+	CartRepository cartRepository;
+	
+	@Autowired 
+	CustomerRepository customerRepository;
+	
+	@Autowired
+	AddressRepository addressRepository;
+
+	public ResponseEntity<Object> addAddress(String username, AddressModel address) {
+		
+		return null;
+	}
+
+}

@@ -1,0 +1,99 @@
+package com.shoppin.ecommerce.model;
+
+
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Table(name = "product")
+@EntityListeners(AuditingEntityListener.class)
+public class ProductModel {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE)
+	@JsonIgnore
+	private Integer pk;
+	
+	private String productName;
+	
+	@ManyToOne
+	@JoinColumn(name = "category_id", referencedColumnName = "pk", nullable = false)
+	private Category category;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "customer_id", referencedColumnName = "pk", nullable = false)
+	@JsonIgnore
+	private CustomerModel seller;
+	
+	@NotNull
+	private double price;
+	
+	@NotNull
+	private int stock;
+	
+	@NotNull
+	@Size(min = 10, max = 100)
+	private String description;
+	
+	private boolean isAvailable = true;
+	
+	@Column(unique = true, nullable = false)
+	private String skuCode;
+	
+	private double discount = 0.0;
+	
+	@Column(unique = false, nullable = false)
+	@Size(min = 10, max = 18)
+	private String brand;
+	
+	private String imagename;
+	
+	private String imageType;
+	
+	@Lob
+	@JsonIgnore
+	private byte[] image;
+	
+	@CreatedDate
+	@JsonIgnore
+	private LocalDateTime creationTime;
+	
+	@UpdateTimestamp
+	@JsonIgnore
+	private LocalDateTime lastUpdatedTime;
+	
+	@LastModifiedBy
+	@JsonIgnore
+	private String lastModifiedBy;
+	
+	@CreatedBy
+	@JsonIgnore
+	private String createdBy;
+}

@@ -1,0 +1,131 @@
+package com.shoppin.ecommerce.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.model.Category;
+import com.shoppin.ecommerce.model.CustomerModel;
+import com.shoppin.ecommerce.model.ProductModel;
+import com.shoppin.ecommerce.repo.CategoryRepository;
+import com.shoppin.ecommerce.repo.CustomerRepository;
+import com.shoppin.ecommerce.repo.ProductRepository;
+
+@Service
+public class SellerProductService {
+	
+	@Autowired
+	CustomerRepository customerRepository;
+	
+	@Autowired
+	ProductRepository productRepository;
+
+	@Autowired
+	CategoryRepository categoryRepository;
+
+	public ResponseEntity<Object> addProduct(String username, ProductModel product) {
+		try {
+			
+			CustomerModel customer = customerRepository.findByEmail(username).orElse(null);
+			
+			ProductModel productModel = productRepository.findBySkuCodeAndSellerPk(product.getSkuCode(), customer.getPk()).orElse(null);
+			
+			if(productModel!=null) {
+				return ResponseEntity.status(409).body("Product already added on your account");
+			}
+			
+			Category category = categoryRepository.findByCategoryName(product.getCategory().getCategoryName()).orElse(null);
+			
+			if(category==null) {
+				category = new Category(product.getCategory().getCategoryName());
+				categoryRepository.save(category);
+			}
+			
+			product.setCategory(category);
+			product.setSeller(customer);
+			product.setSkuCode(generateNewProductSku());
+			
+			productRepository.save(product);
+			
+			return ResponseEntity.status(201).body(productRepository.findByProductName(product.getProductName()).orElse(null));
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong while adding prouct");
+		}
+	}
+
+	public ResponseEntity<List<ProductModel>> getProductBySeller(String username) {
+		
+		List<ProductModel> products = productRepository.findBySellerEmail(username);
+		
+		if(products.isEmpty()|| products==null) {
+			return ResponseEntity.status(404).body(null);
+		}
+		return ResponseEntity.ok(products);
+	}
+	
+	public ResponseEntity<Object> updateProduct(String username, ProductModel product) {
+		try {
+			
+			CustomerModel customer = customerRepository.findByEmail(username).orElse(null);
+			
+			ProductModel productModel = productRepository.findBySkuCodeAndSellerPk(product.getSkuCode(), customer.getPk()).orElse(null);
+			
+			if(productModel==null) {
+				return ResponseEntity.status(404).body("Product already added on your account");
+			}
+			
+			Category category = categoryRepository.findByCategoryName(product.getCategory().getCategoryName()).orElse(null);
+			
+			if(category==null) {
+				category = new Category(product.getCategory().getCategoryName());
+				categoryRepository.save(category);
+			}
+			
+			productModel.setCategory(category);
+			productModel.setBrand(product.getBrand());
+			productModel.setAvailable(product.isAvailable());
+			productModel.setStock(product.getStock());
+			productModel.setDescription(product.getDescription());
+			productModel.setDiscount(product.getDiscount());
+			productModel.setPrice(product.getPrice());
+			productModel.setProductName(product.getProductName());
+			
+			productRepository.save(productModel);
+			
+			return ResponseEntity.ok(productRepository.findBySkuCodeAndSellerPk(product.getSkuCode(), customer.getPk()).orElse(null));
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong while update prouct\n"+e);
+		}
+	}
+	
+	public ResponseEntity<Object> deleteProduct(String username, String sku) {
+		try {
+			
+			CustomerModel customer = customerRepository.findByEmail(username).orElse(null);
+			
+			ProductModel productModel = productRepository.findBySkuCodeAndSellerPk(sku, customer.getPk()).orElse(null);
+			
+			if(productModel==null) {
+				return ResponseEntity.status(404).body("Product already added on your account");
+			}
+			
+			productRepository.deleteBySkuCodeAndSellerPk(sku, customer.getPk());
+			
+			return ResponseEntity.ok("Product Deleted :"+sku);
+			
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong while deleting prouct\n"+e);
+		}
+	}
+
+	private String generateNewProductSku() {
+		Integer lastProductInDB = productRepository.findMaxSkuCodeAsInt();
+		
+		int sku = (lastProductInDB==null)?10001:lastProductInDB+1;
+		
+		return String.valueOf(sku);
+	}
+
+}

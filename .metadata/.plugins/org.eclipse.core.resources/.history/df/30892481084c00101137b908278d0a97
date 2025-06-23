@@ -1,0 +1,90 @@
+package com.shoppin.ecommerce.service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.model.CartModel;
+import com.shoppin.ecommerce.model.CartProductModel;
+import com.shoppin.ecommerce.model.CustomerModel;
+import com.shoppin.ecommerce.model.ProductModel;
+import com.shoppin.ecommerce.repo.AddressRepository;
+import com.shoppin.ecommerce.repo.CartProductRepository;
+import com.shoppin.ecommerce.repo.CartRepository;
+import com.shoppin.ecommerce.repo.CustomerRepository;
+
+@Service
+public class CartService {
+
+	@Autowired
+	CustomerRepository customerRepository;
+	
+	@Autowired
+	CartRepository cartRepository;
+	
+	@Autowired
+	CartProductRepository cartProductRepository;
+	
+	@Autowired
+	AddressRepository addressRepository;
+
+	public ResponseEntity<Object> getCart(String username) throws NullPointerException{
+		return ResponseEntity.ok(cartRepository.findByCustomerEmail(username).orElseThrow());
+	}
+
+	public ResponseEntity<Object> addProductToCart(String username, ProductModel product) {
+		try {
+			CustomerModel customer = customerRepository.findByEmail(username).orElse(null);
+			
+			CartModel cart = cartRepository.findByCustomerEmail(username).orElse(null);
+			
+			if(cart==null) {
+				cart = new CartModel();
+				
+				cart.setCustomer(customer);
+				cartRepository.save(cart);
+			}
+			
+			if(cartProductRepository.existsByCartCustomerPkAndProductPk(customer.getPk(), product.getPk())) {
+				return ResponseEntity.status(409).body("The product already added in cart");
+			}
+			
+			List<CartProductModel> cartProducts = cart.getCartProducts();
+			
+			CartProductModel cartProductModel = new CartProductModel();
+			
+			if(cartProducts.isEmpty()) {
+				cartProducts = new ArrayList<CartProductModel>();
+				
+				cartProductModel.setCart(cart);
+				cartProductModel.setProduct(product);
+				cartProductModel.setQuantity(1);
+				
+				
+			}else {
+				
+				cartProductModel.setCart(cart);
+				cartProductModel.setProduct(product);
+				cartProductModel.setQuantity(1);
+				
+				//cartProductRepository.save(cartProductModel);
+			}
+			cartProducts.add(cartProductModel);
+			cartProductRepository.save(cartProductModel);
+			cart.setTotalPrice(product.getPrice()*cartProductModel.getQuantity());
+			
+			cartRepository.save(cart);	
+			
+			return ResponseEntity.ok(cart);
+			
+			
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong\n"+e);
+		}
+	}
+	
+	
+}

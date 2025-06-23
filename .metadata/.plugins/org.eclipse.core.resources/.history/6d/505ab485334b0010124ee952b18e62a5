@@ -1,0 +1,20 @@
+package com.shoppin.ecommerce.dto;
+
+import java.time.LocalDate;
+
+import org.springframework.stereotype.Component;
+
+import lombok.Data;
+
+@Component
+@Data
+public class CustomerRegisterDto {
+	
+	private String email;
+	private String password;
+	private String firstName;
+	private String lastName;
+	private String contactNumber;
+	private LocalDate DOB;
+
+}

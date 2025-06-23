@@ -1,0 +1,73 @@
+package com.shoppin.ecommerce.service;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+
+import javax.crypto.SecretKey;
+
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+
+@Component
+public class JwtService {
+
+	private String SECRET_KEY = "fhldpsa5sf4sfd5svf5dgdsgsdg5bf5s4g56fds4st8hjd6ssrewgbdfx5g22h3d2g1hgfh41d2";
+	private int JWT_EXPIRATION_TIME = 6000*30*3;
+	
+	public String extractUsername(String token) {
+		return extractClaims(token, Claims::getSubject);
+	}
+
+	private <T>T extractClaims(String token, Function<Claims, T> claimsResolver) {
+		Claims claims = extractAllClaims(token);
+		return claimsResolver.apply(claims);
+	}
+
+	private Claims extractAllClaims(String token) {
+		return Jwts.parser()
+					.verifyWith(getSecretKey())
+					.build()
+					.parseSignedClaims(token)
+					.getPayload();
+	}
+	
+	public boolean validateToken(String token, UserDetails userDetails) {
+		String username = extractUsername(token);
+		return (username.equals(userDetails.getUsername()) && !istokenExpired(token));
+	}
+	
+	private boolean istokenExpired(String token) {
+		return getExpiration(token).before(new Date());
+	}
+
+	private Date getExpiration(String token) {
+		return extractClaims(token, Claims::getExpiration);
+	}
+
+	public String generatetoken(String username) {
+		Map<String, Object> claims = new HashMap<>();
+		return createToken(username, claims);
+	}
+
+	private String createToken(String username, Map<String, Object> claims) {
+		return Jwts.builder()
+					.claims(claims)
+					.subject(username)
+					.issuedAt(new Date(System.currentTimeMillis()))
+					.expiration(new Date(System.currentTimeMillis()+JWT_EXPIRATION_TIME))
+					.signWith(getSecretKey(), Jwts.SIG.HS256)
+					.compact();
+	}
+
+	private SecretKey getSecretKey() {
+		byte[] keys = Decoders.BASE64.decode(SECRET_KEY);
+		return Keys.hmacShaKeyFor(keys);
+	}
+}

@@ -1,0 +1,79 @@
+package com.shoppin.ecommerce.service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Period;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.dto.AuthRequest;
+import com.shoppin.ecommerce.dto.CustomerRegisterDto;
+import com.shoppin.ecommerce.dto.JwtResponse;
+import com.shoppin.ecommerce.model.CustomerModel;
+import com.shoppin.ecommerce.repo.CustomerRepository;
+
+@Service
+public class PublicService {
+	
+	@Autowired
+	CustomerRepository customerRepository;
+	
+	@Autowired
+	PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	AuthenticationManager authenticationManager;
+	
+	@Autowired
+	JwtService jwtService;
+
+	public ResponseEntity<Object> registerNewUser(CustomerRegisterDto customer) {
+		
+		try {
+			
+			CustomerModel customerModel = new CustomerModel();
+			
+			customerModel.setEmail(customer.getEmail());
+			customerModel.setPassword(passwordEncoder.encode(customer.getPassword()));
+			customerModel.setFirstName(customer.getFirstName());
+			customerModel.setLastName(customer.getLastName());
+			customerModel.setDOB(customer.getDOB());
+			customerModel.setRole(customer.getRole());
+			customerModel.setContactNumber(customer.getContactNumber());
+			customerModel.setAge(getAge(customer.getDOB()));
+			
+			customerRepository.save(customerModel);
+			
+			return ResponseEntity.status(201).body(customerRepository.findByEmail(customerModel.getEmail()));
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong"+e);
+		}
+	}
+
+	private int getAge(LocalDate dob) {
+		LocalDate now = LocalDate.now();
+		
+		Period agePeriod = Period.between(dob, now);
+		return agePeriod.getYears();
+	}
+
+	public ResponseEntity<Object> loginUserWithCredentials(AuthRequest authRequest) {
+		try {
+			Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getEmail(), authRequest.getPassword()));
+			if(authentication.isAuthenticated()) {
+				CustomerModel customerModel = new CustomerModel();
+				customerModel.setLastLogin(LocalDateTime.now());
+				String jwt = jwtService.generatetoken(authRequest.getEmail());
+				return ResponseEntity.ok(new JwtResponse(200, jwt));
+			}
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body(null);
+		}
+	}	
+}

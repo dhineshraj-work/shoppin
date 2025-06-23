@@ -1,0 +1,16 @@
+package com.shoppin.ecommerce.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.domain.AuditorAware;
+
+import com.shoppin.ecommerce.security.SecurityAuditAware;
+
+@Configuration
+public class AuditAwareConfig {
+
+	@Bean
+	public AuditorAware<String> auditorProvider(){
+		return new SecurityAuditAware();
+	}
+}

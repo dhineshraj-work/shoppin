@@ -1,0 +1,59 @@
+package com.shoppin.ecommerce.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.dto.CheckoutDTO;
+import com.shoppin.ecommerce.model.AddressModel;
+import com.shoppin.ecommerce.model.CartModel;
+import com.shoppin.ecommerce.model.CustomerModel;
+import com.shoppin.ecommerce.repo.AddressRepository;
+import com.shoppin.ecommerce.repo.CartRepository;
+import com.shoppin.ecommerce.repo.CustomerRepository;
+
+@Service
+public class CheckoutService {
+	
+	@Autowired
+	CartRepository cartRepository;
+	
+	@Autowired 
+	CustomerRepository customerRepository;
+	
+	@Autowired
+	AddressRepository addressRepository;
+
+	public ResponseEntity<Object> addAddress(String username, CheckoutDTO checkout) {
+		try {
+			
+			CustomerModel customer = customerRepository.findByEmail(username).orElse(null);
+			
+			CartModel cart = cartRepository.findByCustomerEmail(username).orElse(null);
+			
+			if(cart==null) {
+				return ResponseEntity.status(404).body("Cart Not Found");
+			}
+			
+			AddressModel deliveryAddress = addressRepository.findByUserPkAndAddressLine1AndAddressType(customer.getPk() ,checkout.getDeliveryAddress().getAddressLine1()
+																, checkout.getDeliveryAddress().getAddressType().name()).orElse(null);
+			
+			cart.setDeliveryAddress();
+			cart.setPaymentAddress(checkout.getPaymentAddress());
+			cart.setPaymentMethod(checkout.getPaymentMethod());
+			cart.setPaymentCompleted(checkout.isPaymentCompleted());
+			
+			cartRepository.save(cart);
+			
+			if(cart.isPaymentCompleted()) {
+				return ResponseEntity.ok("Order Placed");
+			}
+			
+			return ResponseEntity.status(402).body("Order not placed due to payment error");
+			
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong while adding address"+e);
+		}
+	}
+
+}

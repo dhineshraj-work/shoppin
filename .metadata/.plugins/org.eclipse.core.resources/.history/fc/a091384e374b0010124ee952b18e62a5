@@ -1,0 +1,54 @@
+package com.shoppin.ecommerce.service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Period;
+import java.util.Date;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.dto.CustomerRegisterDto;
+import com.shoppin.ecommerce.model.CustomerModel;
+import com.shoppin.ecommerce.repo.CustomerRepository;
+
+@Service
+public class PublicService {
+	
+	@Autowired
+	CustomerRepository customerRepository;
+	
+	@Autowired
+	PasswordEncoder passwordEncoder;
+
+	public ResponseEntity<Object> registerNewUser(CustomerRegisterDto customer) {
+		
+		try {
+			CustomerModel customerModel = new CustomerModel();
+			
+			customerModel.setEmail(customer.getEmail());
+			customerModel.setPassword(passwordEncoder.encode(customer.getPassword()));
+			customerModel.setFirstName(customer.getFirstName());
+			customerModel.setLastName(customer.getLastName());
+			customerModel.setDOB(customer.getDOB());
+			customerModel.setRole(customer.getRole());
+			customerModel.setAge(getAge(customer.getDOB()));
+			customerModel.setLastLogin(LocalDateTime.now());
+			
+			customerRepository.save(customerModel);
+			
+			return ResponseEntity.status(201).body(customerRepository.findByEmail(customerModel.getEmail()));
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong"+e);
+		}
+	}
+
+	private int getAge(LocalDate dob) {
+		LocalDate now = LocalDate.now();
+		
+		Period agePeriod = Period.between(dob, now);
+		return agePeriod.getYears();
+	}	
+}

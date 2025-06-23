@@ -1,0 +1,5 @@
+package com.shoppin.ecommerce.dto;
+
+public class DataLoader {
+
+}

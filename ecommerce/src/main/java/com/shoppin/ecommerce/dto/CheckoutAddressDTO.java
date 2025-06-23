@@ -1,0 +1,15 @@
+package com.shoppin.ecommerce.dto;
+
+import org.springframework.stereotype.Component;
+
+import com.shoppin.ecommerce.model.AddressModel;
+
+import lombok.Data;
+
+@Component
+@Data
+public class CheckoutAddressDTO {
+	
+	private AddressModel paymentAddress;
+	private AddressModel deliveryAddress;
+}
