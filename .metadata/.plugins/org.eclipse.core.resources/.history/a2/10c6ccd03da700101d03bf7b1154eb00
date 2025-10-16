@@ -1,0 +1,39 @@
+package com.shoppin.ecommerce.service;
+import com.shoppin.ecommerce.repo.DeliveryAddressRepository;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.model.CartEntryModel;
+import com.shoppin.ecommerce.model.CartModel;
+
+@Service
+public class CartCalculationService {
+
+	public CartModel calculateCart(CartModel cartModel) {
+		
+
+		try {
+			
+			for(CartEntryModel cartEntry : cartModel.getCartEntries()) {
+				
+				if(cartEntry.getPricePerUnit()!=cartEntry.getProduct().getPrice()) {
+					cartEntry.setPricePerUnit(cartEntry.getProduct().getPrice());
+				}
+				if(cartEntry.getDiscountPerUnit()!=cartEntry.getProduct().getDiscount()) {
+					cartEntry.setPricePerUnit(cartEntry.getProduct().getPrice());
+				}
+				
+				cartEntry.setTotalPrice((cartEntry.getPricePerUnit() - cartEntry.getDiscountPerUnit())*cartEntry.getQuantity());
+			}
+			
+			cartModel.updateTotalPrice(cartModel.getCartEntries());
+			cartModel.updateCartDiscountPrice(cartModel.getCartEntries());
+			
+			return cartModel;
+			
+		}catch(Exception e) {
+			return null;
+		}
+		
+	}
+
+}

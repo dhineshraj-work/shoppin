@@ -38,16 +38,20 @@ public class OrderEntryModel {
 	
 	@ManyToOne
 	@JoinColumn(name = "order_id", referencedColumnName = "pk", nullable = false)
-	@JsonBackReference
+	@JsonBackReference("order_entries")
 	private OrderModel order;
 	
 	@ManyToOne
 	@JoinColumn(name = "product_id", referencedColumnName = "pk", nullable = false)
 	private ProductModel product;
 	
-	private double discount;
+	private double pricePerUnit;
 	
 	private int quantity;
+	
+	private double totalPrice;
+	
+	private double discountPerUnit;
 	
 	@CreatedDate
 	@JsonIgnore

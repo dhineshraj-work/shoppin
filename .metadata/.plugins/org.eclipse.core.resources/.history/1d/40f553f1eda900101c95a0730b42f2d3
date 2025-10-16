@@ -1,0 +1,47 @@
+package com.shoppin.ecommerce.data;
+
+import com.shoppin.ecommerce.model.AddressType;
+import com.shoppin.ecommerce.model.BaseAddress;
+import com.shoppin.ecommerce.model.DeliveryAddressType;
+
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import lombok.Data;
+
+@Data
+public class AddressData {
+
+	private String email;
+	private String firstName;
+	private String lastName;
+	private String addressLine1;
+	private String addressLine2;
+	private String town;
+	private String building;
+	private String postalCode;
+	private String landMark;
+	private String contactNumber;	
+	
+	@Enumerated(EnumType.STRING)
+	private AddressType addressType;
+
+	private String deliveryAddressType;
+
+	public AddressData(BaseAddress address) {
+		
+		this.email = address.getEmail();
+		this.firstName = address.getFirstName();
+		this.lastName = address.getLastName();
+		this.addressLine1 = address.getAddressLine1();
+		this.addressLine2 = address.getAddressLine2();
+		this.town = address.getTown();
+		this.building = address.getBuilding();
+		this.postalCode = address.getPostalCode();
+		this.landMark = address.getLandMark();
+		this.contactNumber = address.getContactNumber();
+		this.addressType = address.getAddressType();
+		this.deliveryAddressType = address.getDeliveryAddressType().name();
+	}
+	
+	
+}

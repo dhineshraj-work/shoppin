@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,11 +34,21 @@ public class PublicService {
 	AuthenticationManager authenticationManager;
 	
 	@Autowired
+	EmailService emailService;
+	
+	@Autowired
 	JwtService jwtService;
+	
+	@Autowired
+	OTPService otpService;
+	
+	private final Logger LOGGER = LoggerFactory.getLogger(PublicService.class);
 
 	public ResponseEntity<Object> registerNewUser(CustomerRegisterDto customer) {
 		
 		try {
+			
+			LOGGER.info("New User register process started");
 			
 			CustomerModel customerModel = new CustomerModel();
 			
@@ -51,9 +63,17 @@ public class PublicService {
 			
 			customerRepository.save(customerModel);
 			
-			return ResponseEntity.status(201).body(customerRepository.findByEmail(customerModel.getEmail()));
+			LOGGER.info("New User register process ended");
+			LOGGER.info("New User registered "+customer.getEmail());
+			
+			return ResponseEntity.status(201).body("User registered  "+customer.getEmail());
+			
 		}catch(Exception e) {
-			return ResponseEntity.status(500).body("Something went wrong"+e);
+			
+			LOGGER.info("Something went wrong while registering new user\n"+e.getMessage());
+			
+			return ResponseEntity.status(500).body("Something went wrong while registering new user\n"+e.getMessage());
+			
 		}
 	}
 
@@ -65,18 +85,68 @@ public class PublicService {
 	}
 
 	public ResponseEntity<Object> loginUserWithCredentials(AuthRequest authRequest) throws UsernameNotFoundException{
+		
 		try {
+			
+			LOGGER.info("User Login "+authRequest.getEmail());
+			
 			Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getEmail(), authRequest.getPassword()));
+			
 			if(authentication.isAuthenticated()) {
+				
 				CustomerModel customerModel = customerRepository.findByEmail(authRequest.getEmail()).orElseThrow();
+				
 				customerModel.setLastLogin(LocalDateTime.now());
+				
 				customerRepository.save(customerModel);
+				
 				String jwt = jwtService.generatetoken(authRequest.getEmail());
-				return ResponseEntity.ok(new JwtResponse(200, jwt));
+				
+				LOGGER.info("User Logged in successfully "+authRequest.getEmail());
+				
+				JwtResponse jwtResponse = new JwtResponse(200, jwt);
+				
+				return ResponseEntity.ok(jwtResponse);
 			}
+			
+			LOGGER.info("User entered wrong credentials "+authRequest.getEmail());
+			
 			return ResponseEntity.status(401).body("Bad Credentials");
+			
 		}catch(Exception e) {
-			return ResponseEntity.status(500).body(e);
-		}
+			
+			LOGGER.info("Something went wrong while User login\n"+e.getMessage());
+			
+			return ResponseEntity.status(500).body("Something went wrong while User login\n"+e.getMessage());
+			
+		}		
 	}	
+	
+	public ResponseEntity<Object> getPasswordResetOTP(String email) {
+		try {
+			
+			CustomerModel user = customerRepository.findByEmail(email).orElse(null);
+			
+			if(user==null) {
+				return ResponseEntity.status(404).body("User not found for the email provided");
+			}
+			
+			String otp = otpService.generateOTP();
+			
+			user.setOtp(otp);
+			
+			customerRepository.save(user);
+			
+			String subject = "JobApp password assistance";
+			String body = "To authenticate, please use the following One Time Password (OTP)  :  "+otp;
+			
+			return ResponseEntity.ok(body);
+			
+			//return emailService.emailOtp(email, subject, body);
+			
+		}catch(Exception e) {
+			return ResponseEntity.status(500).body("Something went wrong  "+e.getMessage());
+		}
+	}
+	
 }

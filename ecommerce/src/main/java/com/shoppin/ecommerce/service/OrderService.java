@@ -1,20 +1,25 @@
 package com.shoppin.ecommerce.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.shoppin.ecommerce.converter.DataConverter;
+import com.shoppin.ecommerce.data.OrderData;
 import com.shoppin.ecommerce.model.CartModel;
-import com.shoppin.ecommerce.model.CartProductModel;
+import com.shoppin.ecommerce.model.CartEntryModel;
+import com.shoppin.ecommerce.model.ConsignmentModel;
 import com.shoppin.ecommerce.model.CustomerModel;
 import com.shoppin.ecommerce.model.OrderEntryModel;
 import com.shoppin.ecommerce.model.OrderModel;
-import com.shoppin.ecommerce.model.OrderStatus;
 import com.shoppin.ecommerce.repo.CartRepository;
 import com.shoppin.ecommerce.repo.CustomerRepository;
 import com.shoppin.ecommerce.repo.OrderEntryRepository;
@@ -38,40 +43,88 @@ public class OrderService {
 	@Autowired
 	OrderProcessService orderProcessService;
 	
+	@Autowired
+	ConsignmentService consignmentService;
+	
+	@Autowired
+	DataConverter converter;
+	
+	private final Logger LOGGER = LoggerFactory.getLogger(OrderService.class);
+	
+	
 	public ResponseEntity<?> getUserOrders(String username) {
-		List<OrderModel> ordersList = orderRepository.findByUserEmail(username);
+		
+		LOGGER.info("User Get Orders : "+username);
+		
+		CustomerModel customer = customerRepository.findByEmail(username).orElse(null);
+		
+		List<OrderModel> ordersList = customer.getOrders();
+		
 		if(ordersList.isEmpty() || ordersList==null) {
+		
+			LOGGER.info("No Orders Available : "+username);
+			
 			return ResponseEntity.status(404).body("No Order for this user");
 		}
-		return ResponseEntity.ok(ordersList);
+		
+		List<OrderData> orderData =  converter.orderConvert(ordersList);
+		
+		LOGGER.info("Orders get successfully : "+username);
+		
+		return ResponseEntity.ok(orderData);
 	}
 	
+	
+
 	public ResponseEntity<Object> getUserOrderByOrderNumber(String username, String orderNo) {
+		
+		LOGGER.info("User Get Order By Order Number : "+username);
+		
 		OrderModel order = orderRepository.findByUserEmailAndOrderNumber(username, orderNo).orElse(null);
+		
 		if(order==null) {
+			
+			LOGGER.info("No Orders Available : "+orderNo+" User "+username);
+			
 			return ResponseEntity.status(404).body("No Order Found");
 		}
+		
+		LOGGER.info("Order get successfully : "+username);
+		
 		return ResponseEntity.ok(order);
 	}
 	
 	public ResponseEntity<Object> cancelOrder(String username, String orderNo) {
+		
 		try {
 			
+			LOGGER.info("User Cancel order process started : "+orderNo+" User "+username);
+			
 			OrderModel order = orderRepository.findByUserEmailAndOrderNumber(username, orderNo).orElse(null);
+			
 			if(order==null) {
+			
+				LOGGER.info("No Order available for Order Number : "+orderNo+" User "+username);
+				
 				return ResponseEntity.status(404).body("No Order Found");
 			}
 			
-			order.setStatus(OrderStatus.CANCELLED);
+			//order.setStatus(OrderStatus.CANCELLED);
 			
 			orderRepository.save(order);
 			
 			orderProcessService.afterCancelOrderProcess(orderNo);
 			
+			LOGGER.info("Order cancelled successfully : "+orderNo+" User "+username);
+			
 			return ResponseEntity.ok("Order Canceled : "+orderNo);
 			
 		}catch(Exception e) {
-			return ResponseEntity.status(500).body("Something went wrong while placing order\n"+ e);
+			
+			LOGGER.error("Something went wrong while cancelling order "+orderNo+" User "+username+"\n"+ e.getMessage());
+			
+			return ResponseEntity.status(500).body("Something went wrong while cancelling order\n"+ e.getMessage());
+			
 		}
 	}
 
@@ -79,7 +132,12 @@ public class OrderService {
 		
 		try {
 			
+			LOGGER.info("Placing Order Process Started "+username+" Cart "+cart.getPk());
+			
 			if(!cart.isPaymentCompleted()) {
+				
+				LOGGER.info("Payment Pending "+username+" Cart "+cart.getPk());
+				
 				return ResponseEntity.status(402).body("Something went wrong while placing order due to payment");
 			}
 			
@@ -91,16 +149,16 @@ public class OrderService {
 			order.setPaymentAddress(cart.getPaymentAddress());
 			order.setOrderEntries(new ArrayList<OrderEntryModel>());
 			order.setOrderNumber(generateOrderCode());
-			order.setStatus(OrderStatus.WAITING);
+			order.setConsignments(new ArrayList<ConsignmentModel>());
 			order.setPaymentCompleted(true);
 			order.setTotalPrice(cart.getTotalPrice());
-			order.setOrderDiscountPrice(cart.getCartDiscountPrice());
-			order.setTotalDiscount(order.getTotalPrice()-order.getTotalPrice());
+			order.setDiscount(cart.getCartDiscountPrice());
 			order.setPaymentMethod(cart.getPaymentMethod());
 			
 			orderRepository.save(order);
 			
 			order.setOrderEntries(setOrderEntryModel(cart, order));
+			order.setConsignments(consignmentService.addConsignment(order));
 			
 			orderRepository.save(order);
 			
@@ -108,51 +166,70 @@ public class OrderService {
 			
 			orderProcessService.afterPlacelOrderProcess(order.getOrderNumber());
 			
-			return ResponseEntity.status(201).body("Order Created:"+order.getOrderNumber());
+			LOGGER.info("Place Order Process Ended: "+order.getOrderNumber());
+			
+			LOGGER.info("Order Created for : "+username+" Order Number : "+ order.getOrderNumber());
+			
+			return ResponseEntity.status(201).body("Order Created for : "+username+" Order Number : "+ order.getOrderNumber());
 			
 		}catch(Exception e) {
+			
+			LOGGER.error("Something went wrong while placing order User "+username+"\n"+ e.getMessage());
+			
 			return ResponseEntity.status(500).body("Something went wrong while placing order\n"+ e);
 		}
 	}
 
 	private String generateOrderCode() {
 		
-		String order = orderRepository.findTopOrderNumberByOrderByCreatedTimeDesc().orElse(null);
-		
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-		LocalDate todayDateTime = LocalDate.now();
 		
-		String today = todayDateTime.format(formatter);
+		LocalDateTime todayDateTime = LocalDate.now().atStartOfDay();
 		
-		if(order==null) {
-			return today+"-0001";
+		LocalDate todayDate = LocalDate.now();
+		
+		String today = todayDate.format(formatter);
+		
+		List<String> orderList = orderRepository.findTopOrderNumberByOrderByCreatedTimeDesc(todayDateTime);
+		
+		int nextSequence = 1;
+		
+		if(!orderList.isEmpty()) {
+			
+			String lastOrderNumber = orderList.get(0).substring(9);
+			
+			nextSequence = Integer.parseInt(lastOrderNumber)+1;
 		}
 		
-		Integer lastOrder = Integer.parseInt(order.substring(8));
+		String orderNumber = today+String.format("%04d", nextSequence);
 		
-		String current = today+"-"+String.valueOf(lastOrder+1);
+		LOGGER.info("Order Number created "+ orderNumber);
 		
-		return current;
+		return orderNumber;
 		
 	}
 	
 	private List<OrderEntryModel> setOrderEntryModel(CartModel cart, OrderModel order) {
 		
-		List<CartProductModel> cartProduct = cart.getCartProducts();
+		List<CartEntryModel> cartProduct = cart.getCartEntries();
 		
 		List<OrderEntryModel> orderEntry = new ArrayList<OrderEntryModel>();
 		
-		for(CartProductModel cartData : cartProduct) {
+		for(CartEntryModel cartData : cartProduct) {
 			
 			OrderEntryModel orderEntryTemp = new OrderEntryModel();
 			
 			orderEntryTemp.setOrder(order);
 			orderEntryTemp.setProduct(cartData.getProduct());
 			orderEntryTemp.setQuantity(cartData.getQuantity());
-			orderEntryTemp.setDiscount(cartData.getProduct().getDiscount());
+			orderEntryTemp.setPricePerUnit(cartData.getProduct().getPrice());
+			orderEntryTemp.setDiscountPerUnit(cartData.getProduct().getDiscount());
+			orderEntryTemp.setTotalPrice(orderEntryTemp.getDiscountPerUnit()*orderEntryTemp.getQuantity());
 			
 			orderEntry.add(orderEntryTemp);
 		}
+		
+		LOGGER.info("Order Entries Created "+ order.getOrderNumber());
 		
 		orderEntryRepository.saveAll(orderEntry);
 		

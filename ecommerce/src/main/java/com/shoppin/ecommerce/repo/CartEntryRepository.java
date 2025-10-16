@@ -1,0 +1,25 @@
+package com.shoppin.ecommerce.repo;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.shoppin.ecommerce.model.CartEntryModel;
+
+import jakarta.transaction.Transactional;
+
+@Repository
+public interface CartEntryRepository extends JpaRepository<CartEntryModel, Integer>{
+
+	Optional<CartEntryModel> findByCartCustomerPkAndProductSkuCode(Integer pk, String sku);
+
+	List<CartEntryModel> findByCartPk(Integer pk);
+
+	boolean existsByCartCustomerPkAndProductSkuCode(Integer pk, String sku);
+
+	@Transactional
+	void deleteByCartCustomerPkAndProductSkuCode(Integer pk, String sku);
+
+}

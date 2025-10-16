@@ -1,5 +1,0 @@
-package com.shoppin.ecommerce.repo;
-
-public interface AddressRepository {
-
-}

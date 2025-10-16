@@ -19,9 +19,11 @@ public class OrderController {
 	@Autowired
 	OrderService orderService;
 	
+	
 	@GetMapping("order")
 	public ResponseEntity<?> getOrders(Principal principal){
 		String username = principal.getName();
+		
 		return orderService.getUserOrders(username);
 	}
 	

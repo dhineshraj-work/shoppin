@@ -1,0 +1,185 @@
+package com.shoppin.ecommerce.service;
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import com.shoppin.ecommerce.converter.DataConverter;
+import com.shoppin.ecommerce.data.ConsignmentData;
+import com.shoppin.ecommerce.dto.ConsignmentDto;
+import com.shoppin.ecommerce.model.ConsignmentModel;
+import com.shoppin.ecommerce.model.OrderEntryModel;
+import com.shoppin.ecommerce.model.OrderModel;
+import com.shoppin.ecommerce.model.OrderStatus;
+import com.shoppin.ecommerce.repo.ConsignmentRepository;
+import com.shoppin.ecommerce.repo.OrderRepository;
+
+@Service
+public class SellerOrderService {
+	
+	@Autowired
+	ConsignmentRepository consignmentRepository;
+	
+	@Autowired
+	OrderRepository orderRepository;
+	
+	@Autowired
+	DataConverter converter;
+	
+	@Autowired
+	OTPService otpService;
+	
+	@Autowired
+	EmailService emailService;
+	
+	private final Logger LOGGER = LoggerFactory.getLogger(SellerOrderService.class);
+
+	public ResponseEntity<Object> getOrders(String username) {
+		
+		LOGGER.info("Get Seller Order "+username);
+		
+		List<ConsignmentModel> consignmentList = consignmentRepository.findBySellerEmail(username);
+		
+		if(consignmentList==null || consignmentList.isEmpty()) {
+			
+			LOGGER.info("No Orders "+username);
+			
+			return ResponseEntity.status(404).body("No Consignments on this seller");
+		}
+		
+		List<ConsignmentData> consignmentData = converter.consignmentConvert(consignmentList);
+		
+		LOGGER.info("Seller Orders successfully returned "+username);
+			
+		return ResponseEntity.ok(consignmentData);
+	}
+
+	public ResponseEntity<Object> updateConsignment(String username, ConsignmentDto consignmentData) {
+		try {
+			
+			LOGGER.info("Seller Update Order Status "+username);
+			
+			ConsignmentModel consignmentModel = consignmentRepository.
+					findBySellerEmailAndParentOrderOrderNumber(username, consignmentData.getOrderNumber()).orElse(null);
+			
+			if(consignmentModel==null) {
+				
+				LOGGER.info("No Order Found "+username);
+				
+				return ResponseEntity.status(404).body("No Data found");
+			}
+			
+			if(consignmentModel.getStatus()==OrderStatus.DELIVERED) {
+				return ResponseEntity.badRequest().body("Already Delivered");
+			}
+			
+			OrderStatus oldStatus = consignmentModel.getStatus();
+			OrderStatus status = consignmentData.getStatus();
+			
+			if(oldStatus==status) {
+				return ResponseEntity.ok("Status updated to "+status);
+			}
+			
+			if(status==OrderStatus.DELIVERED) {
+				
+				LOGGER.info("In Delivered Order status");
+				
+				if(consignmentData.getOtp().length()!=6) {					
+					LOGGER.info("OTP is not Valid");
+					return ResponseEntity.badRequest().body("Provide the OTP from Customer");
+				}
+				
+				else if(consignmentModel.isOtpUsed()) {
+					LOGGER.info("OTP already used");
+					return ResponseEntity.badRequest().body("Provided OTP from Customer already used");
+				}
+				
+				else if(!consignmentData.getOtp().equals(consignmentModel.getOtp()) || consignmentData.getOtp().length()<6) {
+					LOGGER.info("OTP is not Valid");
+					return ResponseEntity.badRequest().body("Provided OTP from Customer is not Vaild");
+					
+				}else if(consignmentData.getOtp().equals(consignmentModel.getOtp())){
+					LOGGER.info("OTP is used");
+					consignmentModel.setOtpUsed(true);
+				}
+			}
+			
+			consignmentModel.setStatus(consignmentData.getStatus());
+			
+			consignmentModel = triggerOtpToCustomer(consignmentModel);
+			
+			consignmentRepository.save(consignmentModel);
+			
+			LOGGER.info("Order Status updated successfully from "+oldStatus+" to "+status+" by "+username+" for "+consignmentData.getOrderNumber());
+			
+			return ResponseEntity.ok("Status Updated "+status.name());
+			
+		}catch (Exception e) {
+			
+			LOGGER.info("Something went wrong while changing status\n"+consignmentData.getStatus()+e.getMessage());
+			
+			return ResponseEntity.status(500).body("Something went wrong while changing status\n"+e.getMessage());
+		}
+	}
+
+	private ConsignmentModel triggerOtpToCustomer(ConsignmentModel consignment) {
+		
+		OrderModel orderModel = consignment.getParentOrder();	
+		
+		if(consignment.getStatus()==OrderStatus.OUT_OF_DELIVERY) {	
+			
+			String otp = otpService.generateOTP();
+			
+			consignment.setOtp(otp);
+			consignment.setOtpUsed(false);
+			
+			String email = orderModel.getUser().getEmail();
+			String subject = "Arriving Soon : Your Order - "+orderModel.getOrderNumber()+" is OUT_OF_DELIVERY and will be delivered soon";
+			String body = "Please use this OTP: "+otp+" while getting the parcel";
+			
+			boolean isEmailSent = emailService.emailOtp(email , subject, body);
+			
+			consignment.setOtpSent(isEmailSent);
+			
+			return consignment;
+		}
+		
+		if(consignment.getStatus()==OrderStatus.DELIVERED) {
+			
+			String email = orderModel.getUser().getEmail();
+			String subject = "Delivered : Your Order - "+orderModel.getOrderNumber()+" is Delivered";
+			String body = "Your Order is delivered with products.";
+			
+			int j = 1;
+			
+			List<OrderEntryModel> items = orderModel.getOrderEntries();
+			
+			for(int i=0;i<items.size();i++) {
+				
+				String valString = "\n"+j+". "+items.get(i).getProduct().getProductName();
+				
+				body += valString;
+				j++;
+						
+			}
+			
+			LOGGER.info(body);
+			
+			boolean isEmailSent = emailService.emailOtp(email , subject, body);
+			
+			if(isEmailSent) {
+				LOGGER.info("Email sent to Customer successfully");
+			}else {
+				LOGGER.info("Email not sent to Customer");
+			}
+			
+		}
+			
+		return consignment;	
+		
+	}
+
+}

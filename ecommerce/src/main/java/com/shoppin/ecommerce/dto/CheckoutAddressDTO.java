@@ -2,7 +2,8 @@ package com.shoppin.ecommerce.dto;
 
 import org.springframework.stereotype.Component;
 
-import com.shoppin.ecommerce.model.AddressModel;
+import com.shoppin.ecommerce.model.DeliveryAddressModel;
+import com.shoppin.ecommerce.model.PaymentAddressModel;
 
 import lombok.Data;
 
@@ -10,6 +11,7 @@ import lombok.Data;
 @Data
 public class CheckoutAddressDTO {
 	
-	private AddressModel paymentAddress;
-	private AddressModel deliveryAddress;
+	private PaymentAddressModel paymentAddress;
+	private DeliveryAddressModel deliveryAddress;
+	private boolean isSameAddress;
 }

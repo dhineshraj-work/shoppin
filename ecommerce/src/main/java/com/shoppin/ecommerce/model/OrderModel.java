@@ -9,8 +9,8 @@ import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -24,11 +24,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Data
@@ -40,24 +41,24 @@ public class OrderModel {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE)
-	@JsonIgnore
 	private Integer pk;
 	
 	@ManyToOne
 	@JoinColumn(name = "user_id", referencedColumnName = "pk", nullable = false)
-	@JsonBackReference
+	@JsonIgnore
 	private CustomerModel user;
 	
 	@OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+	@JsonManagedReference("order_entries")
 	private List<OrderEntryModel> orderEntries;
 	
-	@OneToOne
+	@ManyToOne
 	@JoinColumn(name = "payment_address_id", referencedColumnName = "pk", nullable = false)
-	private AddressModel paymentAddress;	
+	private PaymentAddressModel paymentAddress;	
 	
-	@OneToOne
+	@ManyToOne
 	@JoinColumn(name = "delivery_address_id", referencedColumnName = "pk", nullable = false)
-	private AddressModel deliveryAddress;
+	private DeliveryAddressModel deliveryAddress;
 	
 	@Enumerated(EnumType.STRING)
 	private PaymentMethods paymentMethod;
@@ -67,29 +68,26 @@ public class OrderModel {
 	
 	private boolean isPaymentCompleted;
 	
-	private double totalDiscount;
-	
-	private double orderDiscountPrice;
+	private double discount;
 	
 	private double totalPrice;
 	
-	@Enumerated(EnumType.STRING)
-	private OrderStatus status;
+	@OneToMany(mappedBy = "parentOrder", cascade = CascadeType.ALL)
+	@JsonManagedReference("order_consignments")
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private List<ConsignmentModel> consignments;
 	
 	@CreatedDate
-	@JsonIgnore
 	private LocalDateTime createdTime;
 	
 	@LastModifiedDate
-	@JsonIgnore
 	private LocalDateTime lastUpdatedTime;
 	
 	@CreatedBy
-	@JsonIgnore
 	private String createdBy;
 	
 	@LastModifiedBy
-	@JsonIgnore
 	private String lastModifiedBy;
 	
 }

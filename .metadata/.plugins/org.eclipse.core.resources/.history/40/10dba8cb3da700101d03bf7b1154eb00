@@ -1,0 +1,21 @@
+package com.shoppin.ecommerce.service;
+
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.model.CartModel;
+
+@Service
+public class CartCalculationService {
+
+	public CartModel calculateCart(CartModel cartModel) {
+		
+
+		try {
+			
+		}catch(Exception e) {
+			return null;
+		}
+		
+	}
+
+}
