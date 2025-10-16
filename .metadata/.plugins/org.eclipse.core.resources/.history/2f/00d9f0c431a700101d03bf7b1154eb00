@@ -1,0 +1,5 @@
+package com.shoppin.ecommerce.model;
+
+public class CartItemModel {
+
+}

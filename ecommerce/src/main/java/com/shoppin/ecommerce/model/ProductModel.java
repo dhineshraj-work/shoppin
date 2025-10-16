@@ -1,6 +1,5 @@
 package com.shoppin.ecommerce.model;
 
-
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.UpdateTimestamp;
@@ -45,7 +44,7 @@ public class ProductModel {
 	
 	@ManyToOne
 	@JoinColumn(name = "category_id", referencedColumnName = "pk", nullable = false)
-	private Category category;
+	private CategoryModel category;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "customer_id", referencedColumnName = "pk", nullable = false)

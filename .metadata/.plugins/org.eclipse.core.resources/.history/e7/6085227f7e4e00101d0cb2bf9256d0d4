@@ -1,5 +1,0 @@
-package com.shoppin.ecommerce.security;
-
-public class SecurityAuditAware {
-
-}

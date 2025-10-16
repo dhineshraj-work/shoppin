@@ -11,6 +11,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
@@ -46,16 +47,17 @@ public class CartModel {
 	@JsonBackReference
 	private CustomerModel customer;
 	
-	@OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<CartProductModel> cartProducts;
+	@OneToMany(mappedBy = "cart", cascade = CascadeType.ALL)
+	@JsonManagedReference("cart_entry")
+	private List<CartEntryModel> cartEntries;
 	
 	@OneToOne
 	@JoinColumn(name = "payment_address_id", referencedColumnName = "pk")
-	private AddressModel paymentAddress;
+	private PaymentAddressModel paymentAddress;
 	
 	@OneToOne
 	@JoinColumn(name = "delivery_address_id", referencedColumnName = "pk")
-	private AddressModel deliveryAddress;
+	private DeliveryAddressModel deliveryAddress;
 	
 	@Enumerated(EnumType.STRING)
 	private PaymentMethods paymentMethod = PaymentMethods.NONE;
@@ -82,29 +84,29 @@ public class CartModel {
 	@JsonIgnore
 	private String lastModifiedBy;
 
-	public double updateTotalPrice(List<CartProductModel> cartProducts) {
+	public double updateTotalPrice(List<CartEntryModel> cartProducts) {
 		
 		double total = 0;
 		
 		if(cartProducts==null || cartProducts.isEmpty()) {
 			return total;
 		}
-		for(CartProductModel cp: cartProducts) {
-			total = total+((cp.getProduct().getPrice())*cp.getQuantity());
+		for(CartEntryModel cp: cartProducts) {
+			total = total+((cp.getProduct().getPrice()-cp.getProduct().getDiscount())*cp.getQuantity());
 		}
 		
 		return total;
 	}
 	
-	public double updateCartDiscountPrice(List<CartProductModel> cartProducts) {
+	public double updateCartDiscountPrice(List<CartEntryModel> cartProducts) {
 		
 		double total = 0;
 		
 		if(cartProducts==null || cartProducts.isEmpty()) {
 			return total;
 		}
-		for(CartProductModel cp: cartProducts) {
-			total = total+((cp.getProduct().getPrice()-cp.getProduct().getDiscount())*cp.getQuantity());
+		for(CartEntryModel cp: cartProducts) { 	
+			total = total+(((cp.getProduct().getPrice() - (cp.getProduct().getPrice()-cp.getProduct().getDiscount()))*cp.getQuantity()));
 		}
 		return total;
 	}

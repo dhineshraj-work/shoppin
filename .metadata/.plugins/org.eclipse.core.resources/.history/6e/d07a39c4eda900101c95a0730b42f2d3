@@ -1,0 +1,31 @@
+package com.shoppin.ecommerce.data;
+
+import com.shoppin.ecommerce.model.AddressType;
+import com.shoppin.ecommerce.model.DeliveryAddressType;
+
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@Builder
+public class AddressData {
+
+	private String email;
+	private String firstName;
+	private String lastName;
+	private String addressLine1;
+	private String addressLine2;
+	private String town;
+	private String building;
+	private String postalCode;
+	private String landMark;
+	private String contactNumber;	
+	
+	@Enumerated(EnumType.STRING)
+	private AddressType addressType;	
+	
+	@Enumerated(EnumType.STRING)
+	private DeliveryAddressType deliveryAddressType;
+}

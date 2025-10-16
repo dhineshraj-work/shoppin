@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.shoppin.ecommerce.model.AddressModel;
+import com.shoppin.ecommerce.model.DeliveryAddressModel;
 import com.shoppin.ecommerce.service.AddressService;
 
 @RestController
@@ -21,7 +21,7 @@ public class AddressController {
 	AddressService addressService;
 	
 	@PostMapping("address")
-	public ResponseEntity<Object> addAddress(Principal principal, @RequestBody AddressModel address){
+	public ResponseEntity<Object> addAddress(Principal principal, @RequestBody DeliveryAddressModel address){
 		String username = principal.getName();
 		return addressService.addAddress(username, address);
 	}

@@ -1,0 +1,72 @@
+package com.shoppin.ecommerce.service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.shoppin.ecommerce.model.ConsignmentModel;
+import com.shoppin.ecommerce.model.CustomerModel;
+import com.shoppin.ecommerce.model.OrderEntryModel;
+import com.shoppin.ecommerce.model.OrderModel;
+import com.shoppin.ecommerce.model.OrderStatus;
+import com.shoppin.ecommerce.repo.ConsignmentRepository;
+import com.shoppin.ecommerce.repo.ProductRepository;
+
+@Service
+public class ConsignmentService {
+	
+	@Autowired
+	ProductRepository productRepository;
+	
+	@Autowired
+	ConsignmentRepository consignmentRepository;
+	
+	private final Logger LOGGER = LoggerFactory.getLogger(ConsignmentService.class);
+
+	public List<ConsignmentModel> addConsignment(OrderModel order) {
+		
+		LOGGER.info("Creating Consignment started : "+order.getOrderNumber());
+		
+		Map<CustomerModel, List<OrderEntryModel>> groupedBySeller = order.getOrderEntries().stream()
+																		.collect(Collectors.groupingBy(entry -> entry.getProduct().getSeller()));
+		
+		List<ConsignmentModel> consignmentModels = new ArrayList<>();
+		
+		for(Map.Entry<CustomerModel, List<OrderEntryModel>> groupedSellers: groupedBySeller.entrySet()) {
+			
+			CustomerModel seller = groupedSellers.getKey();
+			
+			List<OrderEntryModel>  orderEntry = groupedSellers.getValue();
+			
+			ConsignmentModel consignment = consignmentRepository.findBySellerEmailAndParentOrderOrderNumber(seller.getEmail(), order.getOrderNumber()).orElse(null);
+
+			if(consignment==null) {
+				consignment = new ConsignmentModel();
+				consignment.setParentOrder(order);
+				consignment.setSeller(seller);
+				consignment.setStatus(OrderStatus.WAITING);
+				consignment.setProducts(new ArrayList<String>());
+			}
+			
+			for(OrderEntryModel orderEntryModel: orderEntry) {
+				
+				consignment.getProducts().add(orderEntryModel.getProduct().getSkuCode());
+			}
+			
+			consignment = consignmentRepository.save(consignment);
+			
+			consignmentModels.add(consignment);
+		}
+		
+		LOGGER.info("Consignment Created : "+order.getOrderNumber());
+		
+		return consignmentModels;
+	}
+
+}

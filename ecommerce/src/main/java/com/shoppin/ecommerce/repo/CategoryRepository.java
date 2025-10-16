@@ -5,10 +5,10 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.shoppin.ecommerce.model.Category;
+import com.shoppin.ecommerce.model.CategoryModel;
 
 @Repository
-public interface CategoryRepository extends JpaRepository<Category, Integer>{
+public interface CategoryRepository extends JpaRepository<CategoryModel, Integer>{
 
-	Optional<Category> findByCategoryName(String name);
+	Optional<CategoryModel> findByCategoryName(String name);
 }

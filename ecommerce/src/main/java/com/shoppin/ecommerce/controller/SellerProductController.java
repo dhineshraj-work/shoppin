@@ -1,7 +1,6 @@
 package com.shoppin.ecommerce.controller;
 
 import java.security.Principal;
-import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.shoppin.ecommerce.dto.ProductModelDto;
-import com.shoppin.ecommerce.model.ProductModel;
 import com.shoppin.ecommerce.service.SellerProductService;
 
 @RestController
@@ -29,7 +27,7 @@ public class SellerProductController {
 	SellerProductService productService;
 	
 	@GetMapping("product/get")
-	public ResponseEntity<List<ProductModel>> getProducts(Principal principal) {
+	public ResponseEntity<?> getProducts(Principal principal) {
 		String username = principal.getName();
 		return productService.getProductBySeller(username);
 	}

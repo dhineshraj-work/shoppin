@@ -1,0 +1,96 @@
+package com.shoppin.ecommerce.converter;
+
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
+import com.shoppin.ecommerce.data.AddressData;
+import com.shoppin.ecommerce.data.ConsignmentData;
+import com.shoppin.ecommerce.data.OrderData;
+import com.shoppin.ecommerce.data.OrderEntryData;
+import com.shoppin.ecommerce.model.AddressType;
+import com.shoppin.ecommerce.model.ConsignmentModel;
+import com.shoppin.ecommerce.model.DeliveryAddressModel;
+import com.shoppin.ecommerce.model.OrderModel;
+import com.shoppin.ecommerce.model.PaymentAddressModel;
+
+import io.jsonwebtoken.lang.Collections;
+
+@Component
+public class DataConverter {
+	
+	public List<OrderData> orderConvert(List<OrderModel> ordersList) {
+		
+		if (ordersList == null || ordersList.isEmpty()) {
+			return Collections.emptyList();
+		}
+		
+		List<OrderData> orderData = new ArrayList<>(); 
+		
+		for(OrderModel order:ordersList) {
+			
+			orderData.add(OrderData.builder()
+							.orderNumber(order.getOrderNumber())
+							.deliveryAddress(order.getDeliveryAddress())
+							.paymentAddress(order.getPaymentAddress())
+							.discount(order.getDiscount())
+							.totalPrice(order.getTotalPrice())
+							.consignments(consignmentConvert(order.getConsignments()))
+							.orderEntries(order.getOrderEntries().stream()
+									.map(item -> new OrderEntryData(
+											item.getProduct(),
+											item.getQuantity())).toList())
+							.build()
+					);
+		}
+		
+		return orderData;
+	}
+
+	public List<ConsignmentData> consignmentConvert(List<ConsignmentModel> consignmentModels) {
+		
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+		
+		List<ConsignmentData> consignmentsData = new ArrayList<>();
+		
+		for(ConsignmentModel consignment : consignmentModels) {
+			
+			consignmentsData.add(ConsignmentData.builder()
+					.consignmentId(consignment.getPk())
+					.orderPlacedDate(formatter.format(consignment.getCreatedTime()))
+					.orderNumber(consignment.getParentOrder().getOrderNumber())
+					.products(consignment.getProducts())
+					.status(consignment.getStatus())
+					.deliveryAddress(new AddressData(consignment.getParentOrder().getDeliveryAddress()))
+					.paymentAddress(new AddressData(consignment.getParentOrder().getPaymentAddress()))
+					.build());
+		}
+		
+		return consignmentsData;
+	}
+	
+	public PaymentAddressModel convertPaymentAddress(DeliveryAddressModel deliveryAddress) {
+		
+		PaymentAddressModel paymentAddress = new PaymentAddressModel();
+		
+		paymentAddress.setUser(deliveryAddress.getUser());
+		paymentAddress.setAddressLine1(deliveryAddress.getAddressLine1());
+		paymentAddress.setAddressLine2(deliveryAddress.getAddressLine2());
+		paymentAddress.setBuilding(deliveryAddress.getBuilding());
+		paymentAddress.setTown(deliveryAddress.getTown());
+		paymentAddress.setPostalCode(deliveryAddress.getPostalCode());
+		paymentAddress.setContactNumber(deliveryAddress.getContactNumber());
+		paymentAddress.setEmail(deliveryAddress.getEmail());
+		paymentAddress.setLandMark(deliveryAddress.getLandMark());
+		paymentAddress.setFirstName(deliveryAddress.getFirstName());
+		paymentAddress.setLastName(deliveryAddress.getLastName());
+		paymentAddress.setDeliveryAddressType(deliveryAddress.getDeliveryAddressType());
+		
+		paymentAddress.setAddressType(AddressType.PAYMENT);
+		
+		return paymentAddress;
+	}
+	
+}

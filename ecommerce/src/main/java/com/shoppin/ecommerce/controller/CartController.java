@@ -21,27 +21,27 @@ public class CartController {
 	@Autowired
 	CartService cartService;
 
-	@GetMapping("viewCart")
+	@GetMapping("/viewCart")
 	public ResponseEntity<Object> getCarts(Principal principal){
 		String username = principal.getName();
 		return cartService.getCart(username);
 	}
 	
-	@PostMapping("cart/add/{sku}")
+	@PostMapping("/cart/add/{sku}")
 	public ResponseEntity<Object> addToCart(Principal principal, @PathVariable String sku){
 		String username = principal.getName();
 		return cartService.addProductToCart(username, sku);
 	}
 	
-	@PutMapping("cart/update/{sku}/{quantity}")
+	@PutMapping("/cart/update/{sku}/{quantity}")
 	public ResponseEntity<Object> updateCart(Principal principal, @PathVariable String sku, @PathVariable Integer quantity){
 		String username = principal.getName();
 		return cartService.updateCart(username, sku, quantity);
 	}
 	
-	@DeleteMapping("cart/delete/{sku}")
+	@DeleteMapping("/cart/delete/{sku}")
 	public ResponseEntity<Object> deleteMapping(Principal principal, @PathVariable String sku){
 		String username = principal.getName();
-		return cartService.deleteCart(username, sku);
+		return cartService.removeProductFromCart(username, sku);
 	}
 }

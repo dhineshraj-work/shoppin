@@ -73,8 +73,7 @@ public class CustomerModel{
 	private int age;
 	
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-	@JsonManagedReference
-	private List<AddressModel> addresses;
+	private List<DeliveryAddressModel> addresses;
 	
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
 	@JsonManagedReference
@@ -90,6 +89,8 @@ public class CustomerModel{
 	@Column(nullable = true)
 	@JsonIgnore
 	private String otp;
+	
+	private boolean isOtpUsed;
 	
 	@CreatedDate
 	@JsonIgnore
